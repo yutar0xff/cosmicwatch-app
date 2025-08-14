@@ -51,6 +51,22 @@ export {
   selectAppAsyncStates,
 } from "./app.selectors";
 
+// オンラインデータ関連
+export {
+  selectIsOnlineEnabled,
+  selectOnlineConfig,
+  selectIsOnlineConnected,
+  selectIsOnlineConnecting,
+  selectOnlineConnectionStatus,
+  selectOnlineStatistics,
+  selectOnlineQueueStatus,
+  selectOnlineBatchSettings,
+  selectOnlineUploadStatus,
+  selectIsOnlineReadyToUpload,
+  selectOnlineDataBatch,
+  selectOnlineServiceConfig,
+} from "./onlineData.selectors";
+
 // =============================================================================
 // UI統合selectors（コンポーネント用）
 // =============================================================================

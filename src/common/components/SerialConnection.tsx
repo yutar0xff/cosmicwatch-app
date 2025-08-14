@@ -1,5 +1,6 @@
-import { useCallback, memo } from "react";
+import { useCallback, memo, useState, useEffect } from "react";
 import { useSerialPort } from "../hooks/useSerialPort";
+import { useOnlineAutoUpload } from "../hooks/useOnlineAutoUpload";
 import { SectionTitle } from "./Layout";
 import {
   CpuChipIcon,
@@ -9,18 +10,23 @@ import {
   BoltIcon,
   BoltSlashIcon,
 } from "@heroicons/react/24/solid";
+import { CloudIcon, WifiIcon } from "@heroicons/react/24/outline";
+import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {
   processSerialData,
+  processServerData,
   clearData,
   stopMeasurement,
+  setServerMode,
 } from "../../store/slices/measurementSlice";
 import { setAutoSavePath } from "../../store/slices/fileSettingsSlice";
 import {
   selectSerialConnectionData,
   selectPlatformInfo,
+  selectLatestData,
 } from "../../store/selectors";
 import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
 
@@ -34,23 +40,68 @@ export const SerialConnection = memo(() => {
     selectSerialConnectionData
   );
   const { isDemoMode } = useAppSelector(selectPlatformInfo);
+  const { latestParsedData } = useAppSelector(selectLatestData);
+
+  // プラットフォームサービス状態
+  const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
+  const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
+
+  // PlatformService初期化
+  useEffect(() => {
+    const initPlatformService = async () => {
+      try {
+        const service = await createPlatformService();
+        if (service instanceof ServerPlatformService) {
+          setPlatformService(service);
+          setIsServerPlatform(true);
+          
+          // Redux storeでサーバーモードを設定
+          dispatch(setServerMode(true));
+        }
+      } catch (error) {
+        console.error("Failed to initialize platform service:", error);
+      }
+    };
+    initPlatformService();
+  }, [dispatch]);
+
+  // オンラインアップロード機能
+  const { 
+    isOnlineEnabled, 
+    isOnlineConnected,
+    uploadDataInstantly 
+  } = useOnlineAutoUpload({
+    isRecording,
+    latestParsedData,
+  });
 
   // データ受信ハンドラー（createAsyncThunk統一版）
   const handleDataReceived = useCallback(
     async (newData: string) => {
       try {
-        // createAsyncThunkでデータ処理を統一
-        await dispatch(
-          processSerialData({
-            rawData: newData,
-            parseFunction: CosmicWatchDataService.parseRawData,
-          })
-        ).unwrap();
+        // プラットフォームに応じて適切なアクションを使用
+        if (isServerPlatform) {
+          // サーバー版：軽量処理
+          await dispatch(
+            processServerData({
+              rawData: newData,
+              parseFunction: CosmicWatchDataService.parseRawData,
+            })
+          ).unwrap();
+        } else {
+          // 従来版：全データ保持
+          await dispatch(
+            processSerialData({
+              rawData: newData,
+              parseFunction: CosmicWatchDataService.parseRawData,
+            })
+          ).unwrap();
+        }
       } catch (error) {
         console.error("データ処理エラー:", error);
       }
     },
-    [dispatch]
+    [dispatch, isServerPlatform]
   );
 
   // データクリアハンドラー
@@ -241,20 +292,39 @@ export const SerialConnection = memo(() => {
 
       {/* 接続状態表示 */}
       <div className="mb-4">
-        <div className="flex items-center text-sm">
-          <StatusIcon
-            className={`h-5 w-5 mr-1 ${statusDisplay.color} ${
-              statusDisplay.spin ? "animate-spin" : ""
-            }`}
-          />
-          <span className={`font-semibold ${statusDisplay.color}`}>
-            {statusDisplay.text}
-          </span>
-          {isConnected && portInfo && (
-            <span className="ml-3 text-xs text-gray-500">
-              (VID: {portInfo.usbVendorId ?? "N/A"}, PID:{" "}
-              {portInfo.usbProductId ?? "N/A"})
+        <div className="flex items-center justify-between text-sm">
+          <div className="flex items-center">
+            <StatusIcon
+              className={`h-5 w-5 mr-1 ${statusDisplay.color} ${
+                statusDisplay.spin ? "animate-spin" : ""
+              }`}
+            />
+            <span className={`font-semibold ${statusDisplay.color}`}>
+              {statusDisplay.text}
             </span>
+            {isConnected && portInfo && (
+              <span className="ml-3 text-xs text-gray-500">
+                (VID: {portInfo.usbVendorId ?? "N/A"}, PID:{" "}
+                {portInfo.usbProductId ?? "N/A"})
+              </span>
+            )}
+          </div>
+          
+          {/* オンライン状態表示 */}
+          {isOnlineEnabled && (
+            <div className="flex items-center">
+              {isOnlineConnected ? (
+                <>
+                  <CloudIcon className="h-4 w-4 text-green-500 mr-1" />
+                  <span className="text-xs text-green-600 font-medium">オンライン</span>
+                </>
+              ) : (
+                <>
+                  <WifiIcon className="h-4 w-4 text-orange-500 mr-1" />
+                  <span className="text-xs text-orange-600 font-medium">オフライン</span>
+                </>
+              )}
+            </div>
           )}
         </div>
       </div>

@@ -1,4 +1,4 @@
-import { useMemo, memo } from "react";
+import { useMemo, memo, useState, useEffect } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -6,6 +6,8 @@ import {
   ColumnDef,
 } from "@tanstack/react-table";
 import { CosmicWatchData } from "../../shared/types";
+import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
+import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
 import { useAppSelector } from "../../store/hooks";
@@ -116,12 +118,77 @@ export const DataTable = memo(() => {
   const { displayData, hasData, sampleData } =
     useAppSelector(selectDataTableData);
 
+  // サーバー版用のローカル状態
+  const [serverData, setServerData] = useState<CosmicWatchData[]>([]);
+  const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
+  const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
+
+  // PlatformService初期化
+  useEffect(() => {
+    const initPlatformService = async () => {
+      try {
+        const service = await createPlatformService();
+        if (service instanceof ServerPlatformService) {
+          setPlatformService(service);
+          setIsServerPlatform(true);
+        }
+      } catch (error) {
+        console.error("Failed to initialize platform service:", error);
+      }
+    };
+    initPlatformService();
+  }, []);
+
+  // サーバー版の場合：ファイルから最新100件のデータを取得
+  useEffect(() => {
+    if (!isServerPlatform || !platformService) {
+      return;
+    }
+
+    const fetchTableData = async () => {
+      try {
+        const sessionHash = platformService.getCurrentSessionHash();
+        if (!sessionHash) {
+          return;
+        }
+
+        // 最新100件のデータを取得
+        const fileData = await platformService.getData(sessionHash, 100);
+        
+        // ファイルデータをパースしてCosmicWatchData配列に変換
+        const parsedFileData: CosmicWatchData[] = [];
+        
+        fileData.lines.forEach((line) => {
+          const parsedLine = CosmicWatchDataService.parseRawData(line);
+          if (parsedLine) {
+            parsedFileData.push(parsedLine);
+          }
+        });
+
+        setServerData(parsedFileData.reverse()); // 最新データを上に表示
+      } catch (error) {
+        console.error("Failed to fetch table data:", error);
+      }
+    };
+
+    // 5秒ごとにデータを更新
+    const intervalId = setInterval(fetchTableData, 5000);
+    fetchTableData(); // 初回実行
+
+    return () => clearInterval(intervalId);
+  }, [isServerPlatform, platformService]);
+
+  // 表示データの選択
+  const actualDisplayData = isServerPlatform ? serverData : displayData;
+  const actualHasData = isServerPlatform ? serverData.length > 0 : hasData;
+  const actualSampleData = isServerPlatform ? (serverData.length > 0 ? serverData[0] : null) : sampleData;
+
   // 列定義を生成（サンプルデータを使用）
-  const columns = useColumnsDefinition(sampleData);
+  const columns = useColumnsDefinition(actualSampleData);
 
   // React Tableの設定
   const table = useReactTable({
-    data: displayData,
+    data: actualDisplayData,
     columns,
     getCoreRowModel: getCoreRowModel(),
   });

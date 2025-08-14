@@ -13,5 +13,9 @@ export default defineConfig(({ mode }) => {
     build: {
       target: "esnext",
     },
+    define: {
+      'process.env.VITE_FILE_MODE': JSON.stringify(process.env.VITE_FILE_MODE || 'web'),
+    },
+    publicDir: false, // Skip copying public files to avoid permissions issue
   };
 });

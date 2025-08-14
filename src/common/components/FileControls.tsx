@@ -5,6 +5,7 @@ import {
 } from "../utils/formatters";
 import { SectionTitle, SectionHeader } from "./Layout";
 import { useAutoSave } from "../hooks/useAutoSave";
+import { useServerAutoSave } from "../hooks/useServerAutoSave";
 import {
   DocumentTextIcon,
   ArrowDownTrayIcon,
@@ -16,8 +17,9 @@ import {
 import { Switch } from "@headlessui/react";
 import { CosmicWatchData } from "../../shared/types";
 import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
-import { PlatformService } from "../services/PlatformService";
+import { PlatformService, ServerPlatformService } from "../services/PlatformService";
 import { ErrorHandler } from "../services/ErrorHandlingService";
+import { OnlineDataSettings } from "./OnlineDataSettings";
 
 // Redux関連のimport
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
@@ -256,19 +258,35 @@ export const FileControls = memo(
       selectFileControlsData
     );
 
-    const { saveDirectory, currentFilePath, selectSaveDirectory, setEnabled } =
-      useAutoSave({
-        isDesktop,
-        enabled: autoSaveSettings.enabled,
-        measurementStartTime,
-        additionalComment: fileSettings.comment,
-        filenameSuffix: fileSettings.suffix,
-        latestRawData,
-        parsedData: parsedData ?? null,
-        onFileHandleChange: setFileHandle,
-        includeComments: fileSettings.includeComments,
-        platformService,
-      });
+    // プラットフォームに応じてフックを選択
+    const isServerPlatform = platformService instanceof ServerPlatformService;
+    
+    const autoSaveResult = isServerPlatform 
+      ? useServerAutoSave({
+          enabled: autoSaveSettings.enabled,
+          measurementStartTime,
+          additionalComment: fileSettings.comment,
+          filenameSuffix: fileSettings.suffix,
+          latestRawData,
+          parsedData: parsedData ?? null,
+          onFileHandleChange: setFileHandle,
+          includeComments: fileSettings.includeComments,
+          platformService: platformService as ServerPlatformService,
+        })
+      : useAutoSave({
+          isDesktop,
+          enabled: autoSaveSettings.enabled,
+          measurementStartTime,
+          additionalComment: fileSettings.comment,
+          filenameSuffix: fileSettings.suffix,
+          latestRawData,
+          parsedData: parsedData ?? null,
+          onFileHandleChange: setFileHandle,
+          includeComments: fileSettings.includeComments,
+          platformService,
+        });
+    
+    const { saveDirectory, currentFilePath, selectSaveDirectory, setEnabled } = autoSaveResult;
 
     const handleAutoSaveToggle = (isChecked: boolean) => {
       dispatch(setAutoSaveEnabled(isChecked));
@@ -280,6 +298,18 @@ export const FileControls = memo(
       const endTime = measurementEndTime ?? new Date();
 
       try {
+        // サーバー版の場合は、セッションファイルを直接ダウンロード
+        if (platformService instanceof ServerPlatformService) {
+          const sessionHash = platformService.getCurrentSessionHash();
+          if (sessionHash) {
+            await platformService.saveFile("", ""); // セッションファイルダウンロード
+            return;
+          } else {
+            throw new Error("測定セッションが開始されていません");
+          }
+        }
+
+        // 従来版（デスクトップ・Web）の処理
         let content = "";
 
         if (fileSettings.includeComments) {
@@ -386,6 +416,8 @@ export const FileControls = memo(
               onSelectDirectory={selectSaveDirectory}
             />
           )}
+
+          <OnlineDataSettings />
         </div>
       </div>
     );

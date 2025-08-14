@@ -9,6 +9,8 @@ import {
 } from "@heroicons/react/24/outline";
 import { ADCHistogram } from "./ADCHistogram";
 import { CountRateChart } from "./CountRateChart";
+import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
+import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
 import { useAppSelector } from "../../store/hooks";
@@ -36,6 +38,10 @@ export const DataHistograms = () => {
   const lastRef = useRef<number>(Date.now());
   const timerRef = useRef<number | null>(null);
   const [updateInterval, setUpdateInterval] = useState<number>(0); // 秒単位（0=常時）
+  
+  // プラットフォームサービス
+  const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
+  const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
 
   // ヒストグラム/チャート設定の状態
   const [adcBinSize, setAdcBinSize] = useState(20);
@@ -73,6 +79,65 @@ export const DataHistograms = () => {
       setUpdateInterval(10);
     }
   }, [isMeasurementOver5Minutes, updateInterval]);
+
+  // PlatformService初期化
+  useEffect(() => {
+    const initPlatformService = async () => {
+      try {
+        const service = await createPlatformService();
+        if (service instanceof ServerPlatformService) {
+          setPlatformService(service);
+          setIsServerPlatform(true);
+        }
+      } catch (error) {
+        console.error("Failed to initialize platform service:", error);
+      }
+    };
+    initPlatformService();
+  }, []);
+
+  // サーバー版の場合：ファイルからデータを取得
+  useEffect(() => {
+    if (!isServerPlatform || !platformService) {
+      return;
+    }
+
+    const fetchFileData = async () => {
+      try {
+        const sessionHash = platformService.getCurrentSessionHash();
+        if (!sessionHash) {
+          return;
+        }
+
+        // 最新1000件のデータを取得
+        const fileData = await platformService.getData(sessionHash, 1000);
+        
+        // ファイルデータをパースしてCosmicWatchData配列に変換
+        const parsedFileData: CosmicWatchData[] = [];
+        
+        fileData.lines.forEach((line, index) => {
+          const parsedLine = CosmicWatchDataService.parseRawData(line);
+          if (parsedLine) {
+            parsedFileData.push(parsedLine);
+          }
+        });
+
+        setSamples(parsedFileData);
+      } catch (error) {
+        console.error("Failed to fetch file data:", error);
+      }
+    };
+
+    // 更新間隔に基づいてファイルデータを取得
+    if (updateInterval === 0) {
+      // 常時更新モード
+      fetchFileData();
+    } else {
+      // 定期更新モード
+      const intervalId = setInterval(fetchFileData, updateInterval * 1000);
+      return () => clearInterval(intervalId);
+    }
+  }, [isServerPlatform, platformService, updateInterval]);
 
   // 自動レイアウト判定（画面サイズに応じて縦横を決定）
   const getAutoLayout = (): "vertical" | "horizontal" => {
@@ -126,8 +191,13 @@ export const DataHistograms = () => {
     }
   };
 
-  // 更新周期は選択可能
+  // 更新周期は選択可能（従来版のみ）
   useEffect(() => {
+    // サーバー版の場合はファイルからデータを取得するのでスキップ
+    if (isServerPlatform) {
+      return;
+    }
+
     if (timerRef.current) clearTimeout(timerRef.current);
 
     // 常時更新モード（updateInterval = 0）の場合は即座に更新
@@ -150,7 +220,7 @@ export const DataHistograms = () => {
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [data, updateInterval]);
+  }, [data, updateInterval, isServerPlatform]);
 
   if (!samples.length) {
     return (
