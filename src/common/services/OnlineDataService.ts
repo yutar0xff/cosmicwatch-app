@@ -66,9 +66,17 @@ export class OnlineDataService {
     };
   }
 
+  private getApiUrl(endpoint: string): string {
+    // 開発環境ではプロキシ経由でアクセス
+    if (import.meta.env.DEV) {
+      return `/api/cosmic${endpoint}`;
+    }
+    return `${this.config.baseUrl}${endpoint}`;
+  }
+
   async login(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/auth/login`, {
+      const response = await fetch(this.getApiUrl('/auth/login'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -103,7 +111,7 @@ export class OnlineDataService {
 
   async register(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/auth/register`, {
+      const response = await fetch(this.getApiUrl('/auth/register'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -146,7 +154,7 @@ export class OnlineDataService {
         created_at: new Date().toISOString(),
       };
 
-      const response = await fetch(`${this.config.baseUrl}/setup-id`, {
+      const response = await fetch(this.getApiUrl('/setup-id'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -188,7 +196,7 @@ export class OnlineDataService {
       };
 
       const response = await fetch(
-        `${this.config.baseUrl}/upload-data/${this.config.userId}`,
+        this.getApiUrl(`/upload-data/${this.config.userId}`),
         {
           method: "POST",
           headers: {
@@ -244,7 +252,7 @@ export class OnlineDataService {
     console.log("Token expired, refreshing...");
     
     try {
-      const response = await fetch(`${this.config.baseUrl}/auth/refresh`, {
+      const response = await fetch(this.getApiUrl('/auth/refresh'), {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -303,7 +311,7 @@ export class OnlineDataService {
     }
 
     try {
-      const response = await fetch(`${this.config.baseUrl}/auth/validate`, {
+      const response = await fetch(this.getApiUrl('/auth/validate'), {
         method: "GET",
         headers: {
           "Authorization": `Bearer ${this.authToken}`,

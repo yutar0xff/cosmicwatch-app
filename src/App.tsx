@@ -24,7 +24,7 @@ import { MarkGithubIcon } from "@primer/octicons-react";
 
 // Redux関連のimport
 import { useAppDispatch, useAppSelector } from "./store/hooks";
-import { clearData, processSerialData } from "./store/slices/measurementSlice";
+import { clearData, processSerialData, processServerData } from "./store/slices/measurementSlice";
 import { setAutoSavePath } from "./store/slices/fileSettingsSlice";
 import {
   initializePlatformService,
@@ -88,13 +88,19 @@ function App() {
       demoIntervalRef.current = setInterval(async () => {
         try {
           const demoData = generateDemoData();
-          // createAsyncThunkでデータ処理を統一
-          await dispatch(
-            processSerialData({
+          console.log("🎭 [Demo] Generated data:", demoData);
+          console.log("🎭 [Demo] Platform:", isDesktop ? "Desktop" : "Web");
+          
+          // プラットフォームに応じて適切なアクションを使用
+          const action = isDesktop ? processSerialData : processServerData;
+          const result = await dispatch(
+            action({
               rawData: demoData,
               parseFunction: CosmicWatchDataService.parseRawData,
             })
           ).unwrap();
+          
+          console.log("🎭 [Demo] Processed result:", result);
         } catch (error) {
           console.error("デモデータ処理エラー:", error);
         }

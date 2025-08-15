@@ -258,34 +258,35 @@ export const FileControls = memo(
       selectFileControlsData
     );
 
-    // プラットフォームに応じてフックを選択
+    // プラットフォームに応じてフックを選択（React Hooks規則に従い両方を常に呼び出す）
     const isServerPlatform = platformService instanceof ServerPlatformService;
     
-    const autoSaveResult = isServerPlatform 
-      ? useServerAutoSave({
-          enabled: autoSaveSettings.enabled,
-          measurementStartTime,
-          additionalComment: fileSettings.comment,
-          filenameSuffix: fileSettings.suffix,
-          latestRawData,
-          parsedData: parsedData ?? null,
-          onFileHandleChange: setFileHandle,
-          includeComments: fileSettings.includeComments,
-          platformService: platformService as ServerPlatformService,
-        })
-      : useAutoSave({
-          isDesktop,
-          enabled: autoSaveSettings.enabled,
-          measurementStartTime,
-          additionalComment: fileSettings.comment,
-          filenameSuffix: fileSettings.suffix,
-          latestRawData,
-          parsedData: parsedData ?? null,
-          onFileHandleChange: setFileHandle,
-          includeComments: fileSettings.includeComments,
-          platformService,
-        });
-    
+    const serverAutoSaveResult = useServerAutoSave({
+      enabled: isServerPlatform ? autoSaveSettings.enabled : false,
+      measurementStartTime: isServerPlatform ? measurementStartTime : null,
+      additionalComment: isServerPlatform ? fileSettings.comment : "",
+      filenameSuffix: isServerPlatform ? fileSettings.suffix : "",
+      latestRawData: isServerPlatform ? latestRawData : null,
+      parsedData: isServerPlatform ? (parsedData ?? null) : null,
+      onFileHandleChange: isServerPlatform ? setFileHandle : () => {},
+      includeComments: isServerPlatform ? fileSettings.includeComments : false,
+      platformService: isServerPlatform ? (platformService as ServerPlatformService) : null,
+    });
+
+    const regularAutoSaveResult = useAutoSave({
+      isDesktop,
+      enabled: !isServerPlatform ? autoSaveSettings.enabled : false,
+      measurementStartTime: !isServerPlatform ? measurementStartTime : null,
+      additionalComment: !isServerPlatform ? fileSettings.comment : "",
+      filenameSuffix: !isServerPlatform ? fileSettings.suffix : "",
+      latestRawData: !isServerPlatform ? latestRawData : null,
+      parsedData: !isServerPlatform ? (parsedData ?? null) : null,
+      onFileHandleChange: !isServerPlatform ? setFileHandle : () => {},
+      includeComments: !isServerPlatform ? fileSettings.includeComments : false,
+      platformService: !isServerPlatform ? platformService : null,
+    });
+
+    const autoSaveResult = isServerPlatform ? serverAutoSaveResult : regularAutoSaveResult;
     const { saveDirectory, currentFilePath, selectSaveDirectory, setEnabled } = autoSaveResult;
 
     const handleAutoSaveToggle = (isChecked: boolean) => {

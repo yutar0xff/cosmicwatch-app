@@ -47,6 +47,9 @@ export function useAutoSave({
 
   // ローカル状態（Redux管理外）
   const [isFileCreated, setIsFileCreated] = useState<boolean>(false);
+  
+  // プラットフォームサービスがnullの場合は無効化
+  const isValidPlatform = platformService !== null && enabled;
 
   // 記録開始時のコメント設定を保存（測定中は変更されない）
   const initialIncludeCommentsRef = useRef<boolean | null>(null);
@@ -71,7 +74,7 @@ export function useAutoSave({
     if (
       isDesktop &&
       measurementStartTime &&
-      enabled &&
+      isValidPlatform &&
       fileSettings.saveDirectory &&
       !isFileCreated &&
       platformService
@@ -136,7 +139,7 @@ export function useAutoSave({
   }, [
     isDesktop,
     measurementStartTime,
-    enabled,
+    isValidPlatform,
     fileSettings.saveDirectory,
     isFileCreated,
     additionalComment,
@@ -151,7 +154,7 @@ export function useAutoSave({
   useEffect(() => {
     if (
       isDesktop &&
-      enabled &&
+      isValidPlatform &&
       fileSettings.autoSavePath &&
       latestRawData &&
       isFileCreated &&
@@ -207,7 +210,7 @@ export function useAutoSave({
     isDesktop,
     latestRawData,
     parsedData,
-    enabled,
+    isValidPlatform,
     fileSettings.autoSavePath,
     isFileCreated,
     platformService,

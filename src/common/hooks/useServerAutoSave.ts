@@ -56,7 +56,8 @@ export function useServerAutoSave({
       measurementStartTime &&
       enabled &&
       !isSessionStarted &&
-      platformService
+      platformService &&
+      typeof platformService.startSession === 'function'
     ) {
       const startSession = async () => {
         try {
@@ -178,7 +179,6 @@ export function useServerAutoSave({
     saveDirectory: "./data/", // サーバー版では固定
     currentFilePath: sessionHash,
     isFileCreated: isSessionStarted,
-    sessionHash,
     selectSaveDirectory: async () => {
       // サーバー版では選択不可
       console.log("Directory selection not available in server mode");
@@ -188,6 +188,8 @@ export function useServerAutoSave({
         stopSession();
       }
     },
+    // サーバー版専用の追加プロパティ（オプショナル）
+    sessionHash,
     stopSession,
   };
 }

@@ -40,7 +40,9 @@ export const SerialConnection = memo(() => {
     selectSerialConnectionData
   );
   const { isDemoMode } = useAppSelector(selectPlatformInfo);
-  const { latestParsedData } = useAppSelector(selectLatestData);
+  // const { latestParsedData } = useAppSelector(selectLatestData);
+  // 一時的に直接 Redux state から取得
+  const latestParsedData = useAppSelector((state) => state.measurement.latestParsedData);
 
   // プラットフォームサービス状態
   const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
@@ -64,6 +66,23 @@ export const SerialConnection = memo(() => {
     };
     initPlatformService();
   }, [dispatch]);
+
+  // デバッグ: Redux state全体を監視
+  const measurementState = useAppSelector((state) => state.measurement);
+  
+  useEffect(() => {
+    console.log("🔍 [SerialConnection] Full measurement state:", {
+      latestRawData: measurementState.latestRawData,
+      latestParsedData: measurementState.latestParsedData,
+      isServerMode: measurementState.isServerMode,
+      totalEvents: measurementState.statistics.totalEvents,
+    });
+  }, [measurementState.latestParsedData, measurementState.latestRawData]);
+
+  // デバッグ: latestParsedDataの変化を監視
+  useEffect(() => {
+    console.log("🔍 [SerialConnection] latestParsedData from selector:", latestParsedData);
+  }, [latestParsedData]);
 
   // オンラインアップロード機能
   const { 
@@ -353,6 +372,7 @@ export const SerialConnection = memo(() => {
             {reconnectButtonProps.text}
           </button>
         )}
+
       </div>
 
       {/* エラー表示 */}

@@ -41,7 +41,7 @@
     "@types/plotly.js": "^2.35.5",
     "@types/react-plotly.js": "^2.6.3",
     "cors": "^2.8.5",
-    "express": "^4.19.2",
+    "express": "^4.21.2",
     "plotly.js": "^3.0.1",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",

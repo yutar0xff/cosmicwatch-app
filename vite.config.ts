@@ -17,5 +17,23 @@ export default defineConfig(({ mode }) => {
       'process.env.VITE_FILE_MODE': JSON.stringify(process.env.VITE_FILE_MODE || 'web'),
     },
     publicDir: false, // Skip copying public files to avoid permissions issue
+    server: {
+      proxy: {
+        // 外部宇宙線サーバーAPIのプロキシ設定（CORS回避）
+        '/api/cosmic': {
+          target: 'http://accel-kitchen.com:3000',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/cosmic/, ''),
+          configure: (proxy, _options) => {
+            proxy.on('error', (err, _req, _res) => {
+              console.log('Proxy error:', err);
+            });
+            proxy.on('proxyReq', (proxyReq, req, _res) => {
+              console.log(`Proxying request: ${req.method} ${req.url} -> ${proxyReq.getHeader('host')}${proxyReq.path}`);
+            });
+          },
+        }
+      }
+    }
   };
 });

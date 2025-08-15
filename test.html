@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CosmicWatch オンライン機能テスト</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        
+        .section {
+            background: #f5f5f5;
+            border-left: 4px solid #007bff;
+            padding: 15px;
+            margin: 20px 0;
+        }
+        
+        .success {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+        
+        .warning {
+            border-color: #ffc107;
+            background: #fff3cd;
+        }
+        
+        .error {
+            border-color: #dc3545;
+            background: #f8d7da;
+        }
+
+        input, textarea, button {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+
+        button:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+        }
+
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🌌 CosmicWatch オンライン機能テスト</h1>
+    
+    <div class="section">
+        <h2>📡 オンライン保存設定</h2>
+        <p>server-README.mdの仕様に基づく外部サーバー接続テスト</p>
+    </div>
+
+    <div class="section">
+        <h3>🔧 サーバー設定</h3>
+        <label>サーバーURL:</label>
+        <input type="text" id="baseUrl" value="http://accel-kitchen.com:3000" placeholder="http://accel-kitchen.com:3000">
+        
+        <div class="grid">
+            <div>
+                <label>ユーザーID:</label>
+                <input type="text" id="userId" placeholder="your_user_id">
+            </div>
+            <div>
+                <label>パスワード:</label>
+                <input type="password" id="password" placeholder="password">
+            </div>
+        </div>
+
+        <div class="grid">
+            <div>
+                <label>GPS緯度:</label>
+                <input type="text" id="gpsLatitude" value="35.6762" placeholder="35.6762">
+            </div>
+            <div>
+                <label>GPS経度:</label>
+                <input type="text" id="gpsLongitude" value="139.6503" placeholder="139.6503">
+            </div>
+        </div>
+
+        <label>測定コメント:</label>
+        <textarea id="comment" rows="2" placeholder="測定場所・目的など">CosmicWatch テスト測定</textarea>
+    </div>
+
+    <div class="section">
+        <h3>🔐 認証テスト</h3>
+        <button id="testLogin" onclick="testLogin()">ログインテスト</button>
+        <button id="testRegister" onclick="testRegister()">ユーザー登録テスト</button>
+        <div id="authStatus" class="status"></div>
+    </div>
+
+    <div class="section">
+        <h3>⚙️ 測定セットアップテスト</h3>
+        <button id="testSetup" onclick="testSetup()" disabled>測定セットアップテスト</button>
+        <div id="setupStatus" class="status"></div>
+    </div>
+
+    <div class="section">
+        <h3>📊 データ送信テスト</h3>
+        <button id="testUpload" onclick="testDataUpload()" disabled>データ送信テスト</button>
+        <button id="testBatch" onclick="testBatchUpload()" disabled>バッチ送信テスト</button>
+        <div id="uploadStatus" class="status"></div>
+    </div>
+
+    <div class="section">
+        <h3>💾 設定永続化テスト</h3>
+        <button onclick="testConfigSave()">設定保存テスト</button>
+        <button onclick="testConfigLoad()">設定読込テスト</button>
+        <button onclick="testConfigClear()">設定クリアテスト</button>
+        <div id="configStatus" class="status"></div>
+    </div>
+
+    <div class="section">
+        <h3>📋 テスト結果ログ</h3>
+        <textarea id="logOutput" rows="10" readonly style="font-family: monospace; font-size: 12px;"></textarea>
+        <button onclick="clearLog()">ログクリア</button>
+    </div>
+
+    <script>
+        let authToken = null;
+        let testService = null;
+
+        // 簡易版OnlineDataServiceクラス（テスト用）
+        class TestOnlineDataService {
+            constructor(config) {
+                this.config = config;
+                this.authToken = null;
+            }
+
+            async login() {
+                try {
+                    const response = await fetch(`${this.config.baseUrl}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: this.config.userId,
+                            password: this.config.password
+                        }),
+                        signal: AbortSignal.timeout(10000)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(`Login failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
+                    }
+
+                    const authData = await response.json();
+                    this.authToken = authData.token;
+                    return { success: true, data: authData };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
+            async register() {
+                try {
+                    const response = await fetch(`${this.config.baseUrl}/auth/register`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            id: this.config.userId,
+                            password: this.config.password,
+                            comment: this.config.comment || 'CosmicWatch App User',
+                            gps_latitude: this.config.gpsLatitude || '35.6762',
+                            gps_longitude: this.config.gpsLongitude || '139.6503'
+                        }),
+                        signal: AbortSignal.timeout(10000)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(`Registration failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
+                    }
+
+                    return { success: true, data: await response.json() };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
+            async setupMeasurement() {
+                if (!this.authToken) {
+                    throw new Error('Not authenticated');
+                }
+
+                try {
+                    const setupData = {
+                        id: this.config.userId,
+                        comment: this.config.comment || 'CosmicWatch measurement',
+                        gps_latitude: this.config.gpsLatitude || '35.6762',
+                        gps_longitude: this.config.gpsLongitude || '139.6503',
+                        created_at: new Date().toISOString()
+                    };
+
+                    const response = await fetch(`${this.config.baseUrl}/setup-id`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify(setupData),
+                        signal: AbortSignal.timeout(10000)
+                    });
+
+                    if (!response.ok) {
+                        const errorData = await response.json().catch(() => ({}));
+                        throw new Error(`Setup failed: ${response.status} - ${errorData.message || 'Unknown error'}`);
+                    }
+
+                    return { success: true, data: await response.json() };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+
+            async uploadData(data) {
+                if (!this.authToken) {
+                    throw new Error('Not authenticated');
+                }
+
+                try {
+                    const response = await fetch(`${this.config.baseUrl}/upload-data/${this.config.userId}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${this.authToken}`
+                        },
+                        body: JSON.stringify(data),
+                        signal: AbortSignal.timeout(5000)
+                    });
+
+                    if (!response.ok) {
+                        throw new Error(`Upload failed: ${response.status}`);
+                    }
+
+                    return { success: true };
+                } catch (error) {
+                    return { success: false, error: error.message };
+                }
+            }
+        }
+
+        function log(message) {
+            const timestamp = new Date().toLocaleTimeString();
+            const logOutput = document.getElementById('logOutput');
+            logOutput.value += `[${timestamp}] ${message}\n`;
+            logOutput.scrollTop = logOutput.scrollHeight;
+            console.log(message);
+        }
+
+        function setStatus(elementId, message, type = 'info') {
+            const element = document.getElementById(elementId);
+            element.textContent = message;
+            element.className = `status ${type}`;
+        }
+
+        function getConfig() {
+            return {
+                baseUrl: document.getElementById('baseUrl').value.trim(),
+                userId: document.getElementById('userId').value.trim(),
+                password: document.getElementById('password').value,
+                gpsLatitude: document.getElementById('gpsLatitude').value.trim(),
+                gpsLongitude: document.getElementById('gpsLongitude').value.trim(),
+                comment: document.getElementById('comment').value.trim()
+            };
+        }
+
+        function validateConfig(config) {
+            const errors = [];
+            if (!config.baseUrl) errors.push('サーバーURLは必須です');
+            if (!config.userId) errors.push('ユーザーIDは必須です');
+            if (!config.password) errors.push('パスワードは必須です');
+            return errors;
+        }
+
+        async function testLogin() {
+            const config = getConfig();
+            const errors = validateConfig(config);
+            
+            if (errors.length > 0) {
+                setStatus('authStatus', `設定エラー: ${errors.join(', ')}`, 'error');
+                log(`❌ ログインテスト失敗: ${errors.join(', ')}`);
+                return;
+            }
+
+            setStatus('authStatus', 'ログイン中...', 'warning');
+            log(`🔐 ログインテスト開始: ${config.baseUrl} (${config.userId})`);
+
+            testService = new TestOnlineDataService(config);
+            const result = await testService.login();
+
+            if (result.success) {
+                setStatus('authStatus', '✅ ログイン成功！', 'success');
+                log(`✅ ログイン成功: ${JSON.stringify(result.data, null, 2)}`);
+                authToken = testService.authToken;
+                
+                // 成功時に測定セットアップボタンを有効化
+                document.getElementById('testSetup').disabled = false;
+                document.getElementById('testUpload').disabled = false;
+                document.getElementById('testBatch').disabled = false;
+            } else {
+                setStatus('authStatus', `❌ ログイン失敗: ${result.error}`, 'error');
+                log(`❌ ログイン失敗: ${result.error}`);
+            }
+        }
+
+        async function testRegister() {
+            const config = getConfig();
+            const errors = validateConfig(config);
+            
+            if (errors.length > 0) {
+                setStatus('authStatus', `設定エラー: ${errors.join(', ')}`, 'error');
+                log(`❌ 登録テスト失敗: ${errors.join(', ')}`);
+                return;
+            }
+
+            setStatus('authStatus', 'ユーザー登録中...', 'warning');
+            log(`👤 ユーザー登録テスト開始: ${config.userId}`);
+
+            testService = new TestOnlineDataService(config);
+            const result = await testService.register();
+
+            if (result.success) {
+                setStatus('authStatus', '✅ ユーザー登録成功！', 'success');
+                log(`✅ ユーザー登録成功: ${JSON.stringify(result.data, null, 2)}`);
+                
+                // 登録後に自動ログイン
+                setTimeout(testLogin, 1000);
+            } else {
+                setStatus('authStatus', `❌ ユーザー登録失敗: ${result.error}`, 'error');
+                log(`❌ ユーザー登録失敗: ${result.error}`);
+            }
+        }
+
+        async function testSetup() {
+            if (!testService || !testService.authToken) {
+                setStatus('setupStatus', '❌ 先にログインしてください', 'error');
+                return;
+            }
+
+            setStatus('setupStatus', '測定セットアップ中...', 'warning');
+            log(`⚙️ 測定セットアップテスト開始`);
+
+            const result = await testService.setupMeasurement();
+
+            if (result.success) {
+                setStatus('setupStatus', '✅ 測定セットアップ成功！', 'success');
+                log(`✅ 測定セットアップ成功`);
+            } else {
+                setStatus('setupStatus', `❌ 測定セットアップ失敗: ${result.error}`, 'error');
+                log(`❌ 測定セットアップ失敗: ${result.error}`);
+            }
+        }
+
+        async function testDataUpload() {
+            if (!testService || !testService.authToken) {
+                setStatus('uploadStatus', '❌ 先にログインしてください', 'error');
+                return;
+            }
+
+            setStatus('uploadStatus', 'データ送信中...', 'warning');
+            log(`📊 データ送信テスト開始`);
+
+            // サンプル宇宙線データ
+            const testData = {
+                timestamp: formatTimestampForServer(new Date()),
+                adc: '1024',
+                vol: '3.3',
+                deadtime: '100'
+            };
+
+            const result = await testService.uploadData(testData);
+
+            if (result.success) {
+                setStatus('uploadStatus', '✅ データ送信成功！', 'success');
+                log(`✅ データ送信成功: ${JSON.stringify(testData, null, 2)}`);
+            } else {
+                setStatus('uploadStatus', `❌ データ送信失敗: ${result.error}`, 'error');
+                log(`❌ データ送信失敗: ${result.error}`);
+            }
+        }
+
+        async function testBatchUpload() {
+            if (!testService || !testService.authToken) {
+                setStatus('uploadStatus', '❌ 先にログインしてください', 'error');
+                return;
+            }
+
+            setStatus('uploadStatus', 'バッチデータ送信中...', 'warning');
+            log(`📊 バッチ送信テスト開始`);
+
+            // サンプルデータを5つ作成
+            const testDataBatch = [];
+            for (let i = 0; i < 5; i++) {
+                testDataBatch.push({
+                    timestamp: formatTimestampForServer(new Date(Date.now() + i * 1000)),
+                    adc: String(1000 + Math.floor(Math.random() * 100)),
+                    vol: String(3.0 + Math.random() * 0.5),
+                    deadtime: String(90 + Math.floor(Math.random() * 20))
+                });
+            }
+
+            let successCount = 0;
+            let failCount = 0;
+
+            for (const data of testDataBatch) {
+                const result = await testService.uploadData(data);
+                if (result.success) {
+                    successCount++;
+                } else {
+                    failCount++;
+                    log(`❌ バッチアイテム失敗: ${result.error}`);
+                }
+                // 少し待機
+                await new Promise(resolve => setTimeout(resolve, 100));
+            }
+
+            if (failCount === 0) {
+                setStatus('uploadStatus', `✅ バッチ送信成功！ (${successCount}/${testDataBatch.length})`, 'success');
+                log(`✅ バッチ送信成功: ${successCount}件送信完了`);
+            } else {
+                setStatus('uploadStatus', `⚠️ バッチ送信部分成功: ${successCount}成功/${failCount}失敗`, 'warning');
+                log(`⚠️ バッチ送信部分成功: ${successCount}成功, ${failCount}失敗`);
+            }
+        }
+
+        function formatTimestampForServer(date) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            const microseconds = String(date.getMilliseconds() * 1000).padStart(6, '0');
+
+            return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${microseconds}`;
+        }
+
+        function testConfigSave() {
+            const config = getConfig();
+            try {
+                localStorage.setItem('cosmicwatch_test_config', JSON.stringify({
+                    version: '1.0',
+                    config: config,
+                    isEnabled: true,
+                    savedAt: new Date().toISOString()
+                }));
+                setStatus('configStatus', '✅ 設定保存成功！', 'success');
+                log(`💾 設定保存成功`);
+            } catch (error) {
+                setStatus('configStatus', `❌ 設定保存失敗: ${error.message}`, 'error');
+                log(`❌ 設定保存失敗: ${error.message}`);
+            }
+        }
+
+        function testConfigLoad() {
+            try {
+                const stored = localStorage.getItem('cosmicwatch_test_config');
+                if (!stored) {
+                    setStatus('configStatus', '⚠️ 保存された設定が見つかりません', 'warning');
+                    log(`⚠️ 保存された設定なし`);
+                    return;
+                }
+
+                const data = JSON.parse(stored);
+                const config = data.config;
+
+                // UIに設定を復元
+                document.getElementById('baseUrl').value = config.baseUrl || '';
+                document.getElementById('userId').value = config.userId || '';
+                document.getElementById('password').value = config.password || '';
+                document.getElementById('gpsLatitude').value = config.gpsLatitude || '';
+                document.getElementById('gpsLongitude').value = config.gpsLongitude || '';
+                document.getElementById('comment').value = config.comment || '';
+
+                setStatus('configStatus', '✅ 設定読込成功！', 'success');
+                log(`📂 設定読込成功: 保存日時 ${data.savedAt}`);
+            } catch (error) {
+                setStatus('configStatus', `❌ 設定読込失敗: ${error.message}`, 'error');
+                log(`❌ 設定読込失敗: ${error.message}`);
+            }
+        }
+
+        function testConfigClear() {
+            try {
+                localStorage.removeItem('cosmicwatch_test_config');
+                setStatus('configStatus', '✅ 設定クリア完了！', 'success');
+                log(`🗑️ 設定クリア完了`);
+            } catch (error) {
+                setStatus('configStatus', `❌ 設定クリア失敗: ${error.message}`, 'error');
+                log(`❌ 設定クリア失敗: ${error.message}`);
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('logOutput').value = '';
+        }
+
+        // 初期化
+        window.onload = function() {
+            log('🌌 CosmicWatch オンライン機能テストページ初期化完了');
+            log('📖 server-README.mdのAPI仕様に基づく機能テスト');
+            log('ℹ️ 使用方法:');
+            log('  1. サーバー設定を入力');
+            log('  2. ユーザー登録またはログイン');
+            log('  3. 測定セットアップ');
+            log('  4. データ送信テスト');
+            log('');
+
+            // 保存された設定があれば読み込み
+            if (localStorage.getItem('cosmicwatch_test_config')) {
+                testConfigLoad();
+                log('💾 前回保存された設定を自動読み込みしました');
+            }
+        };
+    </script>
+</body>
+</html>

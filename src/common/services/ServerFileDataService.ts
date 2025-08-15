@@ -46,7 +46,7 @@ export interface ServerFileDataService {
 export class ServerFileDataServiceImpl implements ServerFileDataService {
   private readonly baseUrl: string;
 
-  constructor(baseUrl: string = "http://localhost:3001") {
+  constructor(baseUrl: string = "/api/cosmic") {
     this.baseUrl = baseUrl;
   }
 
@@ -215,8 +215,8 @@ export class ServerFileDataServiceImpl implements ServerFileDataService {
 export function createServerFileDataService(): ServerFileDataService {
   // 環境に応じてbaseURLを変更可能
   const baseUrl = process.env.NODE_ENV === "development" 
-    ? "http://localhost:3001" 
-    : window.location.origin;
+    ? "/api/cosmic" 
+    : "http://accel-kitchen.com:3000";
     
   return new ServerFileDataServiceImpl(baseUrl);
 }

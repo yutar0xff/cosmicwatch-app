@@ -178,18 +178,43 @@ export const useOnlineAutoUpload = ({
   }, [isConnected, batchData.length, syncOfflineData]);
 
   useEffect(() => {
-    if (!isEnabled || !isRecording || !latestParsedData) {
+    console.log("🔍 [OnlineAutoUpload] State check:", {
+      isEnabled,
+      isRecording,
+      isConnected,
+      hasLatestData: !!latestParsedData,
+      batchSize: batchSettings.batchSize,
+      latestParsedData
+    });
+
+    if (!isEnabled) {
+      console.log("❌ [OnlineAutoUpload] Not enabled");
       return;
     }
+
+    if (!isRecording) {
+      console.log("❌ [OnlineAutoUpload] Not recording");
+      return;
+    }
+
+    if (!latestParsedData) {
+      console.log("❌ [OnlineAutoUpload] No latest parsed data");
+      return;
+    }
+
+    console.log("✅ [OnlineAutoUpload] All conditions met, processing data");
 
     const shouldQueueData = !isConnected;
     const shouldUploadInstantly = isConnected && batchSettings.batchSize === 1;
 
     if (shouldQueueData) {
+      console.log("📦 [OnlineAutoUpload] Queueing data (offline)");
       dispatch(queueData(latestParsedData));
     } else if (shouldUploadInstantly) {
+      console.log("🚀 [OnlineAutoUpload] Uploading instantly");
       uploadDataInstantly(latestParsedData);
     } else if (isConnected) {
+      console.log("📦 [OnlineAutoUpload] Queueing data for batch upload");
       dispatch(queueData(latestParsedData));
     }
   }, [
