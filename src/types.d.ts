@@ -23,7 +23,7 @@ declare module '@heroicons/react/24/solid' {
   export const XMarkIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   export const ExclamationTriangleIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   export const InformationCircleIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  // [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
 
 declare module '@heroicons/react/24/outline' {
@@ -43,5 +43,5 @@ declare module '@heroicons/react/24/outline' {
   export const CheckCircleIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   export const XCircleIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
   export const ArrowPathIcon: React.ComponentType<React.SVGProps<SVGSVGElement>>;
-  [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>>;
+  // [key: string]: React.ComponentType<React.SVGProps<SVGSVGElement>>;
 }
