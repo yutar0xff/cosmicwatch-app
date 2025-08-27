@@ -175,8 +175,8 @@ export class ServerPlatformService implements PlatformService {
     comment: string;
     measurementStartTime: Date;
   }): Promise<string> {
-    this.currentSessionHash = await this.serverService.startSession(options);
-    return this.currentSessionHash;
+    // ServerFileDataServiceを無効化 - 代わりにOnlineDataServiceを使用
+    throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
   async appendData(
@@ -184,19 +184,21 @@ export class ServerPlatformService implements PlatformService {
     rawData: string,
     parsedData?: CosmicWatchData | null
   ): Promise<void> {
-    await this.serverService.appendData(sessionHash, rawData, parsedData);
+    // ServerFileDataServiceを無効化
+    throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
   async getData(sessionHash: string, limit?: number): Promise<{
     lines: string[];
     totalLines: number;
   }> {
-    return await this.serverService.getData(sessionHash, limit);
+    // ServerFileDataServiceを無効化
+    throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
   async stopSession(sessionHash: string, measurementEndTime: Date): Promise<void> {
-    await this.serverService.stopSession(sessionHash, measurementEndTime);
-    this.currentSessionHash = null;
+    // ServerFileDataServiceを無効化
+    throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
   // セッションハッシュの取得

@@ -214,9 +214,10 @@ export class ServerFileDataServiceImpl implements ServerFileDataService {
  */
 export function createServerFileDataService(): ServerFileDataService {
   // 環境に応じてbaseURLを変更可能
+  // 本番環境では空文字でプロキシ経由アクセス
   const baseUrl = process.env.NODE_ENV === "development" 
     ? "/api/cosmic" 
-    : "http://accel-kitchen.com:3000";
+    : "";
     
   return new ServerFileDataServiceImpl(baseUrl);
 }

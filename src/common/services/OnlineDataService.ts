@@ -183,16 +183,29 @@ export class OnlineDataService {
 
   async uploadData(data: CosmicWatchData): Promise<boolean> {
     if (!this.authToken) {
-      console.warn("Not authenticated for online upload");
-      return false;
+      console.warn("Not authenticated for online upload, attempting re-authentication");
+      try {
+        const success = await this.login();
+        if (!success) {
+          console.warn("Re-authentication failed");
+          return false;
+        }
+      } catch (error) {
+        console.warn("Re-authentication error:", error);
+        return false;
+      }
     }
 
     try {
-      const uploadData: OnlineDataUploadRequest = {
-        timestamp: this.formatTimestampForServer(data.date || new Date().toISOString()),
-        adc: String(data.adc),
-        vol: String(data.sipm),
-        deadtime: String(data.deadtime),
+      const uploadData = {
+        event: data.event,
+        timestamp: this.formatTimestampForServer(
+          data.pcTimestamp || data.date || new Date().toISOString()
+        ),
+        adc: data.adc,
+        vol: data.sipm,
+        deadtime: data.deadtime,
+        temp: data.temp || 25.0,
       };
 
       const response = await fetch(
@@ -279,7 +292,14 @@ export class OnlineDataService {
   }
 
   private formatTimestampForServer(isoString: string): string {
-    const date = new Date(isoString);
+    let date = new Date(isoString);
+    
+    // 無効な日付の場合は現在時刻を使用
+    if (isNaN(date.getTime())) {
+      console.warn(`Invalid timestamp "${isoString}", using current time`);
+      date = new Date();
+    }
+    
     const year = date.getFullYear();
     const month = String(date.getMonth() + 1).padStart(2, "0");
     const day = String(date.getDate()).padStart(2, "0");

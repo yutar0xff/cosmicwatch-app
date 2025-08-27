@@ -262,15 +262,15 @@ export const FileControls = memo(
     const isServerPlatform = platformService instanceof ServerPlatformService;
     
     const serverAutoSaveResult = useServerAutoSave({
-      enabled: isServerPlatform ? autoSaveSettings.enabled : false,
-      measurementStartTime: isServerPlatform ? measurementStartTime : null,
-      additionalComment: isServerPlatform ? fileSettings.comment : "",
-      filenameSuffix: isServerPlatform ? fileSettings.suffix : "",
-      latestRawData: isServerPlatform ? latestRawData : null,
-      parsedData: isServerPlatform ? (parsedData ?? null) : null,
-      onFileHandleChange: isServerPlatform ? setFileHandle : () => {},
-      includeComments: isServerPlatform ? fileSettings.includeComments : false,
-      platformService: isServerPlatform ? (platformService as ServerPlatformService) : null,
+      enabled: false, // ServerFileDataService完全無効化
+      measurementStartTime: null,
+      additionalComment: "",
+      filenameSuffix: "",
+      latestRawData: null,
+      parsedData: null,
+      onFileHandleChange: () => {},
+      includeComments: false,
+      platformService: null,
     });
 
     const regularAutoSaveResult = useAutoSave({
