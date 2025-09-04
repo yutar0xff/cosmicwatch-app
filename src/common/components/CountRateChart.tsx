@@ -24,31 +24,61 @@ export const CountRateChart = ({
 
   // 日付文字列をDateオブジェクトに変換するヘルパー関数
   const parseCustomDateString = (dateString: string): Date => {
-    // "2025-05-25-09-03-31.291" → "2025-05-25T09:03:31.291Z"
-    const isoString = dateString.replace(
-      /^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})\.(\d{3})$/,
-      "$1-$2-$3T$4:$5:$6.$7Z"
-    );
-    return new Date(isoString);
+    
+    let isoString = "";
+    let date: Date;
+    
+    // パターン1: "2025-05-25-09-03-31.291" （ミリ秒付き）
+    const patternWithMs = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})\.(\d{3})$/;
+    const matchWithMs = dateString.match(patternWithMs);
+    
+    if (matchWithMs) {
+      isoString = dateString.replace(patternWithMs, "$1-$2-$3T$4:$5:$6.$7Z");
+    } else {
+      // パターン2: "2025-05-25-09-03-31" （ミリ秒なし）
+      const patternWithoutMs = /^(\d{4})-(\d{2})-(\d{2})-(\d{2})-(\d{2})-(\d{2})$/;
+      const matchWithoutMs = dateString.match(patternWithoutMs);
+      
+      if (matchWithoutMs) {
+        isoString = dateString.replace(patternWithoutMs, "$1-$2-$3T$4:$5:$6.000Z");
+      } else {
+        // パターン3: 標準ISO形式を試行
+        isoString = dateString;
+      }
+    }
+    
+    
+    date = new Date(isoString);
+    
+    if (isNaN(date.getTime())) {
+      
+      // フォールバック: 現在時刻を使用
+      date = new Date();
+    }
+    
+    return date;
   };
 
   // カウントレートデータを計算
   const countRateData = useMemo(() => {
-    if (!startTime || data.length === 0)
+    
+    if (!startTime || data.length === 0) {
       return { xData: [], yData: [], stats: null };
+    }
 
     const currentTime = Date.now();
     const totalElapsedMs = currentTime - startTime.getTime();
 
     // データを時刻順にソート（念のため）し、有効な日付データのみを抽出
     const sortedData = data
-      .map((event) => {
-        if (!event.date) return null;
+      .map((event, index) => {
+        if (!event.date) {
+          return null;
+        }
         try {
           const eventTime = parseCustomDateString(event.date).getTime();
           return { ...event, parsedTime: eventTime };
         } catch (error) {
-          console.warn("Failed to parse date:", event.date);
           return null;
         }
       })
@@ -61,6 +91,7 @@ export const CountRateChart = ({
     if (sortedData.length === 0) {
       return { xData: [], yData: [], stats: null };
     }
+
 
     // 実際のデータ範囲を計算
     const firstEventTime = sortedData[0].parsedTime;

@@ -182,31 +182,31 @@ export class OnlineDataService {
   }
 
   async uploadData(data: CosmicWatchData): Promise<boolean> {
+    
     if (!this.authToken) {
-      console.warn("Not authenticated for online upload, attempting re-authentication");
       try {
         const success = await this.login();
         if (!success) {
-          console.warn("Re-authentication failed");
           return false;
         }
       } catch (error) {
-        console.warn("Re-authentication error:", error);
         return false;
       }
     }
 
     try {
+      
+      const timestampSource = data.pcTimestamp || data.date || new Date().toISOString();
+      
       const uploadData = {
         event: data.event,
-        timestamp: this.formatTimestampForServer(
-          data.pcTimestamp || data.date || new Date().toISOString()
-        ),
+        timestamp: this.formatTimestampForServer(timestampSource),
         adc: data.adc,
         vol: data.sipm,
         deadtime: data.deadtime,
         temp: data.temp || 25.0,
       };
+      
 
       const response = await fetch(
         this.getApiUrl(`/upload-data/${this.config.userId}`),
@@ -233,7 +233,6 @@ export class OnlineDataService {
       return true;
     } catch (error) {
       this.lastError = error instanceof Error ? error.message : String(error);
-      console.warn("Online data upload failed:", this.lastError);
       return false;
     }
   }
@@ -292,11 +291,11 @@ export class OnlineDataService {
   }
 
   private formatTimestampForServer(isoString: string): string {
+    
     let date = new Date(isoString);
     
     // 無効な日付の場合は現在時刻を使用
     if (isNaN(date.getTime())) {
-      console.warn(`Invalid timestamp "${isoString}", using current time`);
       date = new Date();
     }
     
@@ -308,7 +307,9 @@ export class OnlineDataService {
     const seconds = String(date.getSeconds()).padStart(2, "0");
     const microseconds = String(date.getMilliseconds() * 1000).padStart(6, "0");
 
-    return `${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${microseconds}`;
+    const formatted = `${year}-${month}-${day}-${hours}-${minutes}-${seconds}.${microseconds}`;
+    
+    return formatted;
   }
 
   private async exponentialBackoff(): Promise<void> {

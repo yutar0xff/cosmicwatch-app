@@ -13,13 +13,16 @@ export const processSerialData = createAsyncThunk(
   ) => {
     try {
       const { rawData, parseFunction } = params;
+      
       const parsedData = parseFunction(rawData);
 
-      return {
+      const result = {
         rawData,
         parsedData,
         timestamp: new Date().toISOString(),
       };
+      
+      return result;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : String(error)
@@ -55,13 +58,16 @@ export const processServerData = createAsyncThunk(
   ) => {
     try {
       const { rawData, parseFunction } = params;
+      
       const parsedData = parseFunction(rawData);
 
-      return {
+      const result = {
         rawData,
         parsedData,
         timestamp: new Date().toISOString(),
       };
+      
+      return result;
     } catch (error) {
       return rejectWithValue(
         error instanceof Error ? error.message : String(error)
@@ -220,21 +226,35 @@ const measurementSlice = createSlice({
       state.endTime = null;
     });
 
-    // processServerData - サーバー版軽量処理
+    // processServerData - サーバー版処理（配列にもデータを追加）
     builder.addCase(processServerData.fulfilled, (state, action) => {
       const { rawData, parsedData, timestamp } = action.payload;
 
-      // 最新データのみ更新（履歴は保持しない）
+      // 生データを追加
+      state.rawData.push(rawData);
       state.latestRawData = rawData;
-      
+
       if (parsedData) {
+        // パースされたデータを配列に追加
+        state.parsedData.push(parsedData);
         state.latestParsedData = parsedData;
 
-        // 統計情報のみ更新（配列には追加しない）
+        // 統計情報を更新
         state.statistics.totalEvents += 1;
         state.statistics.totalADC += parsedData.adc;
         state.statistics.totalSiPM += parsedData.sipm;
         state.statistics.lastCalculatedAt = Date.now();
+      } else {
+      }
+
+      // サーバーモードの場合、メモリ使用量を制限
+      if (state.isServerMode) {
+        if (state.rawData.length > state.maxMemoryItems) {
+          state.rawData = state.rawData.slice(-state.maxMemoryItems);
+        }
+        if (state.parsedData.length > state.maxMemoryItems) {
+          state.parsedData = state.parsedData.slice(-state.maxMemoryItems);
+        }
       }
 
       // 開始時刻を設定（初回データ受信時）

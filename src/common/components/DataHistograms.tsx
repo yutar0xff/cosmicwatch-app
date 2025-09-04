@@ -30,6 +30,7 @@ export const DataHistograms = () => {
     measurementTimes,
     statistics,
   } = useAppSelector(selectDataHistogramsData);
+  
   const { startTime } = measurementTimes;
   const measurementDuration = useAppSelector(selectMeasurementDuration);
   const isRecording = useAppSelector(selectIsRecording);
@@ -96,48 +97,7 @@ export const DataHistograms = () => {
     initPlatformService();
   }, []);
 
-  // サーバー版の場合：ファイルからデータを取得
-  useEffect(() => {
-    if (!isServerPlatform || !platformService) {
-      return;
-    }
-
-    const fetchFileData = async () => {
-      try {
-        const sessionHash = platformService.getCurrentSessionHash();
-        if (!sessionHash) {
-          return;
-        }
-
-        // 最新1000件のデータを取得
-        const fileData = await platformService.getData(sessionHash, 1000);
-        
-        // ファイルデータをパースしてCosmicWatchData配列に変換
-        const parsedFileData: CosmicWatchData[] = [];
-        
-        fileData.lines.forEach((line, index) => {
-          const parsedLine = CosmicWatchDataService.parseRawData(line);
-          if (parsedLine) {
-            parsedFileData.push(parsedLine);
-          }
-        });
-
-        setSamples(parsedFileData);
-      } catch (error) {
-        console.error("Failed to fetch file data:", error);
-      }
-    };
-
-    // 更新間隔に基づいてファイルデータを取得
-    if (updateInterval === 0) {
-      // 常時更新モード
-      fetchFileData();
-    } else {
-      // 定期更新モード
-      const intervalId = setInterval(fetchFileData, updateInterval * 1000);
-      return () => clearInterval(intervalId);
-    }
-  }, [isServerPlatform, platformService, updateInterval]);
+  // サーバーファイル取得ロジックを削除（Reduxデータを直接使用）
 
   // 自動レイアウト判定（画面サイズに応じて縦横を決定）
   const getAutoLayout = (): "vertical" | "horizontal" => {
@@ -191,36 +151,36 @@ export const DataHistograms = () => {
     }
   };
 
-  // 更新周期は選択可能（従来版のみ）
+  // データ更新処理（Reduxデータを直接使用）
   useEffect(() => {
-    // サーバー版の場合はファイルからデータを取得するのでスキップ
-    if (isServerPlatform) {
-      return;
-    }
-
+    
     if (timerRef.current) clearTimeout(timerRef.current);
 
     // 常時更新モード（updateInterval = 0）の場合は即座に更新
     if (updateInterval === 0) {
-      setSamples(data);
+      setSamples(data || []);
       lastRef.current = Date.now();
       return;
     }
 
+    // 定期更新モード
     const now = Date.now();
     const intervalMs = updateInterval * 1000;
     if (now - lastRef.current >= intervalMs) {
-      setSamples(data);
+      setSamples(data || []);
       lastRef.current = now;
     }
+    
     timerRef.current = window.setTimeout(() => {
-      setSamples(data);
+      setSamples(data || []);
       lastRef.current = Date.now();
     }, intervalMs);
+    
     return () => {
       if (timerRef.current) clearTimeout(timerRef.current);
     };
-  }, [data, updateInterval, isServerPlatform]);
+  }, [data, updateInterval]);
+
 
   if (!samples.length) {
     return (

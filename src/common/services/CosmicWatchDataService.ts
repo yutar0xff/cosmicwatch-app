@@ -32,7 +32,7 @@ export interface ValidationResult {
  */
 export class CosmicWatchDataService {
   private static readonly VALID_COLUMN_COUNTS = [6, 7, 9];
-  private static readonly DEBUG = false; // デバッグモードの制御
+  private static readonly DEBUG = false; // デバッグモード
 
   /**
    * 生データ行をパースしてCosmicWatchDataオブジェクトに変換
@@ -41,21 +41,22 @@ export class CosmicWatchDataService {
     // コメント行はnullを返す
     if (line.startsWith("#")) {
       if (CosmicWatchDataService.DEBUG)
-        console.log("Skipping comment line:", line);
       return null;
     }
 
     try {
       const parts = line.trim().split(/\s+/); // タブまたはスペースで分割
-      if (CosmicWatchDataService.DEBUG) console.log("Split parts:", parts);
+      
 
       // 現在のPC時刻を取得
       const pcTimestamp = getCurrentTimestampString();
 
+      let parsedData: CosmicWatchData | null = null;
+
       // データ形式に応じてパース
       switch (parts.length) {
         case 6: // event time adc sipm deadtime temp
-          return {
+          parsedData = {
             event: parseInt(parts[0], 10),
             date: pcTimestamp, // PC時刻をdate項目として追加
             time: parseInt(parts[1], 10),
@@ -64,21 +65,23 @@ export class CosmicWatchDataService {
             deadtime: parseInt(parts[4], 10),
             temp: parseFloat(parts[5]),
           };
+          break;
         case 7: // event date totaltime adc sipm deadtime temp
-          return {
+          parsedData = {
             event: parseInt(parts[0], 10),
-            date: pcTimestamp, // 元のdateを上書き
-            time: parseInt(parts[2], 10), // totaltimeをtimeに統合
+            date: parts[1], // 元のdateフィールドを保持（PC時刻で上書きしない）
+            time: parseInt(parts[2], 10), // totaltime をtimeに統合
             adc: parseInt(parts[3], 10),
             sipm: parseFloat(parts[4]),
             deadtime: parseInt(parts[5], 10),
             temp: parseFloat(parts[6]),
           };
+          break;
         case 9: // event date totaltime adc sipm deadtime temp hum press
-          return {
+          parsedData = {
             event: parseInt(parts[0], 10),
-            date: pcTimestamp, // 元のdateを上書き
-            time: parseInt(parts[2], 10), // totaltimeをtimeに統合
+            date: parts[1], // 元のdate フィールドを保持（PC時刻で上書きしない）
+            time: parseInt(parts[2], 10), // totaltime をtimeに統合
             adc: parseInt(parts[3], 10),
             sipm: parseFloat(parts[4]),
             deadtime: parseInt(parts[5], 10),
@@ -86,12 +89,29 @@ export class CosmicWatchDataService {
             hum: parseFloat(parts[7]),
             press: parseFloat(parts[8]),
           };
+          break;
         default:
-          if (CosmicWatchDataService.DEBUG)
-            console.log("Invalid number of parts:", parts.length);
           return null;
       }
+
+      
+      // 数値フィールドの検証
+      if (parsedData) {
+        const validationIssues = [];
+        if (isNaN(parsedData.event)) validationIssues.push("event");
+        if (isNaN(parsedData.time)) validationIssues.push("time");  
+        if (isNaN(parsedData.adc)) validationIssues.push("adc");
+        if (isNaN(parsedData.sipm)) validationIssues.push("sipm");
+        if (isNaN(parsedData.deadtime)) validationIssues.push("deadtime");
+        if (isNaN(parsedData.temp)) validationIssues.push("temp");
+        
+        if (validationIssues.length > 0) {
+        }
+      }
+
+      return parsedData;
     } catch (error) {
+      
       ErrorHandler.dataParsing(
         "データのパースに失敗しました",
         error instanceof Error ? error : new Error(String(error)),
@@ -105,6 +125,7 @@ export class CosmicWatchDataService {
    * データ行の形式を検証
    */
   static validateDataFormat(line: string): ValidationResult {
+    
     // すでにコメント行の場合は有効とみなす
     if (line.startsWith("#")) {
       return {
@@ -120,9 +141,10 @@ export class CosmicWatchDataService {
       const hasNumericFirstColumn = !isNaN(parseInt(parts[0], 10));
       const isValidColumnCount = this.VALID_COLUMN_COUNTS.includes(columnCount);
 
+
       const isValid = isValidColumnCount && hasNumericFirstColumn;
 
-      return {
+      const result = {
         isValid,
         columnCount,
         hasNumericFirstColumn,
@@ -132,6 +154,8 @@ export class CosmicWatchDataService {
             )} columns with numeric first column, got ${columnCount} columns`
           : undefined,
       };
+
+      return result;
     } catch (error) {
       return {
         isValid: false,
@@ -149,7 +173,8 @@ export class CosmicWatchDataService {
    */
   static commentizeInvalidData(line: string, reason?: string): string {
     const prefix = reason ? `# Invalid (${reason}): ` : "# Invalid format: ";
-    return `${prefix}${line}`;
+    const result = `${prefix}${line}`;
+    return result;
   }
 
   /**
@@ -169,6 +194,7 @@ export class CosmicWatchDataService {
    * CosmicWatchDataをファイル出力用のタブ区切り形式に変換
    */
   static formatDataForFile(data: CosmicWatchData): string {
+    
     const fields: (string | number)[] = [];
 
     fields.push(data.event);
@@ -193,13 +219,15 @@ export class CosmicWatchDataService {
       fields.push(data.press);
     }
 
-    return fields.join("\t");
+    const result = fields.join("\t");
+    return result;
   }
 
   /**
    * 生データ行をファイル出力用形式に変換（パース失敗時のフォールバック）
    */
   static formatRawDataForFile(line: string): string {
+    
     if (line.trim().startsWith("#")) {
       return line;
     }
@@ -208,13 +236,15 @@ export class CosmicWatchDataService {
     if (line.includes("\t")) {
       return line;
     }
-    return line.replace(/\s+/g, "\t");
+    const result = line.replace(/\s+/g, "\t");
+    return result;
   }
 
   /**
    * データ配列から基本統計情報を計算
    */
   static calculateStatistics(data: CosmicWatchData[]) {
+    
     if (data.length === 0) {
       return {
         count: 0,
@@ -230,7 +260,8 @@ export class CosmicWatchDataService {
     const adcValues = data.map((d) => d.adc);
     const tempValues = data.map((d) => d.temp);
 
-    return {
+
+    const stats = {
       count: data.length,
       adcMean: adcValues.reduce((sum, val) => sum + val, 0) / adcValues.length,
       adcMax: Math.max(...adcValues),
@@ -240,5 +271,7 @@ export class CosmicWatchDataService {
       tempMax: Math.max(...tempValues),
       tempMin: Math.min(...tempValues),
     };
+
+    return stats;
   }
 }
