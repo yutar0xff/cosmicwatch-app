@@ -1,4 +1,4 @@
-import { useMemo, memo, useState, useEffect } from "react";
+import { useMemo, memo, useState, useEffect, useCallback } from "react";
 import {
   flexRender,
   getCoreRowModel,
@@ -10,8 +10,9 @@ import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
 import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
-import { useAppSelector } from "../../store/hooks";
-import { selectDataTableData } from "../../store/selectors";
+import { useAppSelector, useAppDispatch } from "../../store/hooks";
+import { selectDataTableData, selectIndexedDBState, selectCurrentSession } from "../../store/selectors";
+import { loadDataFromIndexedDB } from "../../store/slices/measurementSlice";
 
 /**
  * セルの値をフォーマットする関数
@@ -111,17 +112,38 @@ const EmptyDataDisplay = () => (
 );
 
 /**
- * データテーブルコンポーネント（メモ化済み）
+ * 読み込み中表示コンポーネント
+ */
+const LoadingDisplay = () => (
+  <div className="p-6 text-gray-500 text-center flex items-center justify-center h-full">
+    <div className="animate-pulse">データ読み込み中...</div>
+  </div>
+);
+
+/**
+ * データテーブルコンポーネント（IndexedDB対応、最適化済み）
  */
 export const DataTable = memo(() => {
-  // Redux storeから表示用データを取得（統合selector使用）
-  const { displayData, hasData, sampleData } =
-    useAppSelector(selectDataTableData);
+  const dispatch = useAppDispatch();
+  
+  // Redux storeから状態を取得
+  const { displayData, hasData, sampleData } = useAppSelector(selectDataTableData);
+  const indexedDBState = useAppSelector(selectIndexedDBState);
+  const currentSession = useAppSelector(selectCurrentSession);
 
-  // サーバー版用のローカル状態
+  // ローカル状態
   const [serverData, setServerData] = useState<CosmicWatchData[]>([]);
   const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
   const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<'memory' | 'indexeddb'>('memory');
+  const [currentPage, setCurrentPage] = useState(0);
+  const [pageSize] = useState(100);
+  
+  // IndexedDBが利用可能で有効な場合の実際のデータソース
+  const useIndexedDBData = indexedDBState?.isEnabled && currentSession && viewMode === 'indexeddb';
+  
+  // データビューの状態
+  const dataView = useAppSelector((state) => state.measurement.dataView);
 
   // PlatformService初期化
   useEffect(() => {
@@ -138,6 +160,28 @@ export const DataTable = memo(() => {
     };
     initPlatformService();
   }, []);
+
+  // IndexedDBからデータを読み込む関数
+  const loadIndexedDBData = useCallback(
+    (page: number = 0) => {
+      if (!useIndexedDBData || !currentSession) return;
+      
+      dispatch(loadDataFromIndexedDB({
+        sessionId: currentSession.sessionId,
+        limit: pageSize,
+        offset: page * pageSize
+      }));
+    },
+    [dispatch, useIndexedDBData, currentSession, pageSize]
+  );
+
+  // IndexedDBデータの初期読み込み
+  useEffect(() => {
+    if (useIndexedDBData && currentSession) {
+      loadIndexedDBData(0);
+      setCurrentPage(0);
+    }
+  }, [useIndexedDBData, currentSession?.sessionId, loadIndexedDBData]);
 
   // サーバー版の場合：ファイルから最新100件のデータを取得
   useEffect(() => {
@@ -178,10 +222,36 @@ export const DataTable = memo(() => {
     return () => clearInterval(intervalId);
   }, [isServerPlatform, platformService]);
 
-  // 表示データの選択
-  const actualDisplayData = isServerPlatform ? serverData : displayData;
-  const actualHasData = isServerPlatform ? serverData.length > 0 : hasData;
-  const actualSampleData = isServerPlatform ? (serverData.length > 0 ? serverData[0] : null) : sampleData;
+  // ページ変更ハンドラー
+  const handlePageChange = useCallback((newPage: number) => {
+    setCurrentPage(newPage);
+    if (useIndexedDBData) {
+      loadIndexedDBData(newPage);
+    }
+  }, [useIndexedDBData, loadIndexedDBData]);
+
+  // データソースの統合決定
+  const getDisplayData = (): CosmicWatchData[] => {
+    if (isServerPlatform) return serverData;
+    if (useIndexedDBData) return dataView.data;
+    return displayData;
+  };
+
+  const getHasData = (): boolean => {
+    if (isServerPlatform) return serverData.length > 0;
+    if (useIndexedDBData) return dataView.totalCount > 0;
+    return hasData;
+  };
+
+  const getSampleData = (): CosmicWatchData | undefined => {
+    if (isServerPlatform) return serverData.length > 0 ? serverData[0] : undefined;
+    if (useIndexedDBData) return dataView.data.length > 0 ? dataView.data[0] : undefined;
+    return sampleData ?? undefined;
+  };
+
+  const actualDisplayData = getDisplayData();
+  const actualHasData = getHasData();
+  const actualSampleData = getSampleData();
 
   // 列定義を生成（サンプルデータを使用）
   const columns = useColumnsDefinition(actualSampleData);
@@ -193,43 +263,134 @@ export const DataTable = memo(() => {
     getCoreRowModel: getCoreRowModel(),
   });
 
+  // 読み込み中の場合
+  if (useIndexedDBData && dataView.isLoading) {
+    return <LoadingDisplay />;
+  }
+
+  // データがない場合
+  if (!actualHasData) {
+    return <EmptyDataDisplay />;
+  }
+
+  // ページネーション情報の計算
+  const totalPages = useIndexedDBData 
+    ? Math.ceil(dataView.totalCount / pageSize)
+    : Math.ceil(actualDisplayData.length / pageSize);
+  
+  const showPagination = totalPages > 1;
+
   return (
-    <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
-        <thead className="bg-gray-50">
-          {table.getHeaderGroups().map((headerGroup) => (
-            <tr key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <th
-                  key={header.id}
-                  className="px-4 py-3 text-center text-xs font-medium text-gray-600 tracking-wider whitespace-nowrap"
-                >
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
-                        header.column.columnDef.header,
-                        header.getContext()
-                      )}
-                </th>
-              ))}
-            </tr>
-          ))}
-        </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
-          {table.getRowModel().rows.map((row) => (
-            <tr key={row.id} className="hover:bg-gray-50">
-              {row.getVisibleCells().map((cell) => (
-                <td
-                  key={cell.id}
-                  className="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap"
-                >
-                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="space-y-4">
+      {/* データソース切り替えボタン（IndexedDB有効時のみ） */}
+      {indexedDBState?.isEnabled && currentSession && (
+        <div className="flex items-center gap-2 text-sm">
+          <span className="text-gray-600">表示データ:</span>
+          <div className="flex bg-gray-100 rounded-lg p-1">
+            <button
+              onClick={() => setViewMode('memory')}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                viewMode === 'memory'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              最新データ ({displayData.length}件)
+            </button>
+            <button
+              onClick={() => setViewMode('indexeddb')}
+              className={`px-3 py-1 rounded-md transition-colors ${
+                viewMode === 'indexeddb'
+                  ? 'bg-white text-blue-600 shadow-sm'
+                  : 'text-gray-600 hover:text-gray-800'
+              }`}
+            >
+              全データ ({dataView.totalCount}件)
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* テーブル */}
+      <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-gray-200 border border-gray-200">
+          <thead className="bg-gray-50">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {headerGroup.headers.map((header) => (
+                  <th
+                    key={header.id}
+                    className="px-4 py-3 text-center text-xs font-medium text-gray-600 tracking-wider whitespace-nowrap"
+                  >
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
+                          header.column.columnDef.header,
+                          header.getContext()
+                        )}
+                  </th>
+                ))}
+              </tr>
+            ))}
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-200">
+            {table.getRowModel().rows.map((row) => (
+              <tr key={row.id} className="hover:bg-gray-50">
+                {row.getVisibleCells().map((cell) => (
+                  <td
+                    key={cell.id}
+                    className="px-4 py-3 text-center text-sm text-gray-900 whitespace-nowrap"
+                  >
+                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* ページネーション（IndexedDBデータビュー時のみ） */}
+      {showPagination && useIndexedDBData && (
+        <div className="flex items-center justify-between border-t border-gray-200 pt-4">
+          <div className="text-sm text-gray-600">
+            {currentPage * pageSize + 1} - {Math.min((currentPage + 1) * pageSize, dataView.totalCount)} / {dataView.totalCount} 件
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handlePageChange(0)}
+              disabled={currentPage === 0}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              最初
+            </button>
+            <button
+              onClick={() => handlePageChange(currentPage - 1)}
+              disabled={currentPage === 0}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              前へ
+            </button>
+            <span className="text-sm text-gray-600">
+              {currentPage + 1} / {totalPages}
+            </span>
+            <button
+              onClick={() => handlePageChange(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              次へ
+            </button>
+            <button
+              onClick={() => handlePageChange(totalPages - 1)}
+              disabled={currentPage >= totalPages - 1}
+              className="px-3 py-1 text-sm border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+            >
+              最後
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 });

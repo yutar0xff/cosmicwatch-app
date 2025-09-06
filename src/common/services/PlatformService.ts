@@ -149,7 +149,7 @@ export class ServerPlatformService implements PlatformService {
   }
 
   async writeFile(
-    path: string,
+    _path: string,
     content: string,
     options?: { append?: boolean }
   ): Promise<void> {
@@ -170,7 +170,7 @@ export class ServerPlatformService implements PlatformService {
   }
 
   // サーバー版固有のメソッド
-  async startSession(options: {
+  async startSession(_options: {
     includeComments: boolean;
     comment: string;
     measurementStartTime: Date;
@@ -180,15 +180,15 @@ export class ServerPlatformService implements PlatformService {
   }
 
   async appendData(
-    sessionHash: string,
-    rawData: string,
-    parsedData?: CosmicWatchData | null
+    _sessionHash: string,
+    _rawData: string,
+    _parsedData?: CosmicWatchData | null
   ): Promise<void> {
     // ServerFileDataServiceを無効化
     throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
-  async getData(sessionHash: string, limit?: number): Promise<{
+  async getData(_sessionHash: string, _limit?: number): Promise<{
     lines: string[];
     totalLines: number;
   }> {
@@ -196,7 +196,7 @@ export class ServerPlatformService implements PlatformService {
     throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
 
-  async stopSession(sessionHash: string, measurementEndTime: Date): Promise<void> {
+  async stopSession(_sessionHash: string, _measurementEndTime: Date): Promise<void> {
     // ServerFileDataServiceを無効化
     throw new Error("ServerFileDataService is disabled. Use OnlineDataService instead.");
   }
@@ -308,7 +308,7 @@ function checkUseServerMode(): boolean {
   }
   
   // 環境変数でチェック
-  if (process.env.VITE_FILE_MODE === 'server') {
+  if ((import.meta as any).env?.VITE_FILE_MODE === 'server') {
     return true;
   }
   
@@ -328,5 +328,5 @@ function checkServerAvailability(): boolean {
   
   // localhost:3001 or 本番環境でサーバーAPIが利用可能な場合
   return currentUrl.hostname === 'localhost' || 
-         process.env.NODE_ENV === 'production';
+         (import.meta as any).env?.PROD === true;
 }

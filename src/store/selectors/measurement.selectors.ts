@@ -1,11 +1,7 @@
 import { createSelector } from "@reduxjs/toolkit";
 import { RootState } from "../index";
 import { MeasurementState } from "../slices/measurementSlice";
-import {
-  getStableCurrentTime,
-  safeAverage,
-  calculateDurationInSeconds,
-} from "./utils";
+import { safeAverage, calculateDurationInSeconds } from "./utils";
 
 // =============================================================================
 // 基本セレクター
@@ -114,6 +110,70 @@ export const selectPaginatedData = createSelector(
       data: parsedData.slice(startIndex, endIndex),
       totalCount: parsedData.length,
       hasMore: endIndex < parsedData.length,
+    };
+  }
+);
+
+// =============================================================================
+// IndexedDB関連セレクター
+// =============================================================================
+
+export const selectIndexedDBState = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.indexedDB
+);
+
+export const selectCurrentSession = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.currentSession
+);
+
+export const selectSessions = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.sessions
+);
+
+export const selectStorageMode = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.storageMode
+);
+
+export const selectDataView = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.dataView
+);
+
+export const selectPendingBatch = createSelector(
+  [selectMeasurementData],
+  (measurement) => measurement.pendingBatch
+);
+
+// バッチ処理の状態
+export const selectBatchState = createSelector(
+  [selectMeasurementData],
+  (measurement) => ({
+    pendingCount: measurement.pendingBatch.length,
+    batchSize: measurement.batchSize,
+    shouldFlush: measurement.pendingBatch.length >= measurement.batchSize,
+    lastBatchSave: measurement.lastBatchSave,
+  })
+);
+
+// データ統計情報（IndexedDB含む）
+export const selectDataStatistics = createSelector(
+  [selectMeasurementData],
+  (measurement) => {
+    const memoryCount = measurement.parsedData.length;
+    const totalCount = measurement.storageMode.useIndexedDB 
+      ? measurement.dataView.totalCount 
+      : memoryCount;
+    
+    return {
+      memoryCount,
+      totalCount,
+      storageMode: measurement.storageMode,
+      isUsingIndexedDB: measurement.storageMode.useIndexedDB,
+      indexedDBEnabled: measurement.indexedDB.isEnabled,
     };
   }
 );

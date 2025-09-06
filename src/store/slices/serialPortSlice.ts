@@ -1,4 +1,4 @@
-import { createSlice, PayloadAction, createAsyncThunk } from "@reduxjs/toolkit";
+import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 import { PortInfo } from "../../shared/types";
 
 // Redux管理用の状態（シリアライズ可能なもののみ）

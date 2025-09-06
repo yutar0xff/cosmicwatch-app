@@ -18,7 +18,7 @@ export const TimeHistogram = ({
   startTime,
 }: TimeHistogramProps) => {
   // ズーム状態を保持
-  const [zoomState, setZoomState] = useState<any>(null);
+  const [zoomState, setZoomState] = useState<Record<string, unknown> | null>(null);
 
   // 到来間隔を計算（前のイベントとの時間差）
   const intervalVals = useMemo(() => {
@@ -72,7 +72,7 @@ export const TimeHistogram = ({
   }, [intervalVals, data.length, startTime]);
 
   // グラフのズーム状態が変更されたときのハンドラ
-  const handleRelayout = (event: any) => {
+  const handleRelayout = (event: Record<string, unknown>) => {
     if (
       (event["xaxis.range[0]"] !== undefined &&
         event["xaxis.range[1]"] !== undefined) ||

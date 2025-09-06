@@ -1,20 +1,13 @@
 import { useState, useEffect, useRef } from "react";
-import {
-  formatDateForFilename,
-  formatDateTimeLocale,
-} from "../utils/formatters";
 import { CosmicWatchData } from "../../shared/types";
-import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
 import { ServerPlatformService } from "../services/PlatformService";
 import { ErrorHandler } from "../services/ErrorHandlingService";
 
 // Redux関連のimport
-import { useAppDispatch, useAppSelector } from "../../store/hooks";
+import { useAppDispatch } from "../../store/hooks";
 import {
-  setSaveDirectory,
   setAutoSavePath,
 } from "../../store/slices/fileSettingsSlice";
-import { selectAutoSaveData } from "../../store/selectors";
 
 interface ServerAutoSaveOptions {
   enabled: boolean;
@@ -41,7 +34,6 @@ export function useServerAutoSave({
 }: ServerAutoSaveOptions) {
   // Redux hooks
   const dispatch = useAppDispatch();
-  const { fileSettings } = useAppSelector(selectAutoSaveData);
 
   // ローカル状態
   const [isSessionStarted, setIsSessionStarted] = useState<boolean>(false);

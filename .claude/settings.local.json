@@ -21,7 +21,16 @@
       "Bash(cp:*)",
       "Bash(VITE_FILE_MODE=server npx vite build --mode production --outdir dist)",
       "Bash(ls:*)",
-      "Bash(VITE_FILE_MODE=server npx vite build --mode production --emptyOutDir)"
+      "Bash(VITE_FILE_MODE=server npx vite build --mode production --emptyOutDir)",
+      "Bash(npx tsc:*)",
+      "Bash(npm run lint)",
+      "Bash(npx eslint:*)",
+      "Bash(npm run build:*)",
+      "Bash(npx vite build:*)",
+      "Bash(npm install)",
+      "Bash(VITE_SKIP_TYPESCRIPT_CHECK=true npx vite build --mode production)",
+      "Read(//home/accel-kitchen/app/cosmicwatch-app2/**)",
+      "Bash(VITE_SKIP_TYPESCRIPT_CHECK=true npx vite build --mode development)"
     ],
     "deny": []
   }

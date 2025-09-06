@@ -1,13 +1,11 @@
 import { ChangeEvent, memo, useState, useEffect } from "react";
 import { Switch } from "@headlessui/react";
-import {
-  CloudIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ExclamationCircleIcon,
-  ArrowPathIcon,
-  WifiIcon,
-} from "@heroicons/react/24/outline";
+import CloudIcon from "@heroicons/react/24/outline/CloudIcon";
+import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import XCircleIcon from "@heroicons/react/24/outline/XCircleIcon";
+import ExclamationCircleIcon from "@heroicons/react/24/outline/ExclamationCircleIcon";
+import ArrowPathIcon from "@heroicons/react/24/outline/ArrowPathIcon";
+import WifiIcon from "@heroicons/react/24/outline/WifiIcon";
 import { SectionHeader } from "./Layout";
 import { useAppDispatch, useAppSelector } from "../../store/hooks";
 import {

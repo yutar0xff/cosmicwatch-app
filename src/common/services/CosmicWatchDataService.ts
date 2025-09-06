@@ -99,14 +99,13 @@ export class CosmicWatchDataService {
       if (parsedData) {
         const validationIssues = [];
         if (isNaN(parsedData.event)) validationIssues.push("event");
-        if (isNaN(parsedData.time)) validationIssues.push("time");  
+        if (parsedData.time === undefined || isNaN(parsedData.time)) validationIssues.push("time");  
         if (isNaN(parsedData.adc)) validationIssues.push("adc");
         if (isNaN(parsedData.sipm)) validationIssues.push("sipm");
         if (isNaN(parsedData.deadtime)) validationIssues.push("deadtime");
         if (isNaN(parsedData.temp)) validationIssues.push("temp");
         
-        if (validationIssues.length > 0) {
-        }
+        // if there are validation issues, caller may decide how to handle
       }
 
       return parsedData;

@@ -20,7 +20,7 @@ export const CountRateChart = ({
   graphLayout = "vertical",
 }: CountRateChartProps) => {
   // ズーム状態を保持
-  const [zoomState, setZoomState] = useState<any>(null);
+  const [zoomState, setZoomState] = useState<Record<string, unknown> | null>(null);
 
   // 日付文字列をDateオブジェクトに変換するヘルパー関数
   const parseCustomDateString = (dateString: string): Date => {
@@ -71,7 +71,7 @@ export const CountRateChart = ({
 
     // データを時刻順にソート（念のため）し、有効な日付データのみを抽出
     const sortedData = data
-      .map((event, index) => {
+      .map((event) => {
         if (!event.date) {
           return null;
         }
@@ -194,7 +194,7 @@ export const CountRateChart = ({
   }, [data, startTime, dataPoints]);
 
   // グラフのズーム状態が変更されたときのハンドラ
-  const handleRelayout = (event: any) => {
+  const handleRelayout = (event: Record<string, unknown>) => {
     if (
       (event["xaxis.range[0]"] !== undefined &&
         event["xaxis.range[1]"] !== undefined) ||

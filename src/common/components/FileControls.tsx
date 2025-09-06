@@ -6,14 +6,12 @@ import {
 import { SectionTitle, SectionHeader } from "./Layout";
 import { useAutoSave } from "../hooks/useAutoSave";
 import { useServerAutoSave } from "../hooks/useServerAutoSave";
-import {
-  DocumentTextIcon,
-  ArrowDownTrayIcon,
-  Cog6ToothIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  FolderOpenIcon,
-} from "@heroicons/react/24/outline";
+import DocumentTextIcon from "@heroicons/react/24/outline/DocumentTextIcon";
+import ArrowDownTrayIcon from "@heroicons/react/24/outline/ArrowDownTrayIcon";
+import Cog6ToothIcon from "@heroicons/react/24/outline/Cog6ToothIcon";
+import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import XCircleIcon from "@heroicons/react/24/outline/XCircleIcon";
+import FolderOpenIcon from "@heroicons/react/24/outline/FolderOpenIcon";
 import { Switch } from "@headlessui/react";
 import { CosmicWatchData } from "../../shared/types";
 import { CosmicWatchDataService } from "../services/CosmicWatchDataService";

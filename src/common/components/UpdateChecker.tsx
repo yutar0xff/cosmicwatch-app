@@ -2,12 +2,10 @@ import { useState, useEffect } from "react";
 import { check } from "@tauri-apps/plugin-updater";
 import { PlatformService } from "../services/PlatformService";
 import { ErrorHandler } from "../services/ErrorHandlingService";
-import {
-  ArrowDownTrayIcon,
-  CheckCircleIcon,
-  ExclamationTriangleIcon,
-  XMarkIcon,
-} from "@heroicons/react/24/outline";
+import ArrowDownTrayIcon from "@heroicons/react/24/outline/ArrowDownTrayIcon";
+import CheckCircleIcon from "@heroicons/react/24/outline/CheckCircleIcon";
+import ExclamationTriangleIcon from "@heroicons/react/24/outline/ExclamationTriangleIcon";
+import XMarkIcon from "@heroicons/react/24/outline/XMarkIcon";
 
 interface UpdateState {
   isChecking: boolean;

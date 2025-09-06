@@ -9,17 +9,13 @@ import { UpdateChecker } from "./common/components/UpdateChecker";
 import { LayoutSelector } from "./common/components/LayoutSelector";
 import { useResponsiveLayout } from "./common/hooks/useResponsiveLayout";
 import { CosmicWatchDataService } from "./common/services/CosmicWatchDataService";
-import {
-  ExclamationTriangleIcon,
-  PlayIcon,
-  StopIcon,
-  LightBulbIcon,
-} from "@heroicons/react/24/solid";
-import {
-  TableCellsIcon,
-  CodeBracketIcon,
-  Squares2X2Icon,
-} from "@heroicons/react/24/outline";
+import ExclamationTriangleIcon from "@heroicons/react/24/solid/ExclamationTriangleIcon";
+import PlayIcon from "@heroicons/react/24/solid/PlayIcon";
+import StopIcon from "@heroicons/react/24/solid/StopIcon";
+import LightBulbIcon from "@heroicons/react/24/solid/LightBulbIcon";
+import TableCellsIcon from "@heroicons/react/24/outline/TableCellsIcon";
+import CodeBracketIcon from "@heroicons/react/24/outline/CodeBracketIcon";
+import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
 import { MarkGithubIcon } from "@primer/octicons-react";
 
 // Redux関連のimport

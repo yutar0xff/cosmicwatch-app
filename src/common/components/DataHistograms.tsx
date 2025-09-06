@@ -1,16 +1,12 @@
 import { useState, useEffect, useRef, useMemo } from "react";
 import { CosmicWatchData } from "../../shared/types";
 import { SectionTitle } from "./Layout";
-import {
-  ChartBarIcon,
-  ClockIcon,
-  CogIcon,
-  Squares2X2Icon,
-} from "@heroicons/react/24/outline";
+import ChartBarIcon from "@heroicons/react/24/outline/ChartBarIcon";
+import ClockIcon from "@heroicons/react/24/outline/ClockIcon";
+import CogIcon from "@heroicons/react/24/outline/CogIcon";
+import Squares2X2Icon from "@heroicons/react/24/outline/Squares2X2Icon";
 import { ADCHistogram } from "./ADCHistogram";
 import { CountRateChart } from "./CountRateChart";
-import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
-import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
 import { useAppSelector } from "../../store/hooks";
@@ -24,12 +20,7 @@ type GraphLayoutType = "auto" | "vertical" | "horizontal";
 
 export const DataHistograms = () => {
   // Redux storeからデータを取得 - 統合selectorを使用
-  const {
-    parsedData: data,
-    histogramData,
-    measurementTimes,
-    statistics,
-  } = useAppSelector(selectDataHistogramsData);
+  const { parsedData: data, measurementTimes } = useAppSelector(selectDataHistogramsData);
   
   const { startTime } = measurementTimes;
   const measurementDuration = useAppSelector(selectMeasurementDuration);
@@ -40,9 +31,7 @@ export const DataHistograms = () => {
   const timerRef = useRef<number | null>(null);
   const [updateInterval, setUpdateInterval] = useState<number>(0); // 秒単位（0=常時）
   
-  // プラットフォームサービス
-  const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
-  const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
+  // プラットフォームサービス（未使用のため削除）
 
   // ヒストグラム/チャート設定の状態
   const [adcBinSize, setAdcBinSize] = useState(20);
@@ -80,22 +69,6 @@ export const DataHistograms = () => {
       setUpdateInterval(10);
     }
   }, [isMeasurementOver5Minutes, updateInterval]);
-
-  // PlatformService初期化
-  useEffect(() => {
-    const initPlatformService = async () => {
-      try {
-        const service = await createPlatformService();
-        if (service instanceof ServerPlatformService) {
-          setPlatformService(service);
-          setIsServerPlatform(true);
-        }
-      } catch (error) {
-        console.error("Failed to initialize platform service:", error);
-      }
-    };
-    initPlatformService();
-  }, []);
 
   // サーバーファイル取得ロジックを削除（Reduxデータを直接使用）
 

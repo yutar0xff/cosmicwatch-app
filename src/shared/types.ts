@@ -11,6 +11,19 @@ export interface CosmicWatchData {
   pcTimestamp?: string;
 }
 
+export interface DataStorageMode {
+  useIndexedDB: boolean;
+  memoryLimit: number;
+  persistenceEnabled: boolean;
+}
+
+export interface MeasurementDataView {
+  data: CosmicWatchData[];
+  totalCount: number;
+  hasMore: boolean;
+  isLoading: boolean;
+}
+
 export interface SerialPortConfig {
   isMaster: boolean;
   portNumber: string;

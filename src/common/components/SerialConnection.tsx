@@ -2,15 +2,14 @@ import { useCallback, memo, useState, useEffect } from "react";
 import { useSerialPort } from "../hooks/useSerialPort";
 import { useOnlineAutoUpload } from "../hooks/useOnlineAutoUpload";
 import { SectionTitle } from "./Layout";
-import {
-  CpuChipIcon,
-  CheckCircleIcon,
-  XCircleIcon,
-  ArrowPathIcon,
-  BoltIcon,
-  BoltSlashIcon,
-} from "@heroicons/react/24/solid";
-import { CloudIcon, WifiIcon } from "@heroicons/react/24/outline";
+import CpuChipIcon from "@heroicons/react/24/solid/CpuChipIcon";
+import CheckCircleIcon from "@heroicons/react/24/solid/CheckCircleIcon";
+import XCircleIcon from "@heroicons/react/24/solid/XCircleIcon";
+import ArrowPathIcon from "@heroicons/react/24/solid/ArrowPathIcon";
+import BoltIcon from "@heroicons/react/24/solid/BoltIcon";
+import BoltSlashIcon from "@heroicons/react/24/solid/BoltSlashIcon";
+import CloudIcon from "@heroicons/react/24/outline/CloudIcon";
+import WifiIcon from "@heroicons/react/24/outline/WifiIcon";
 import { ServerPlatformService, createPlatformService } from "../services/PlatformService";
 
 // Redux関連のimport
@@ -23,11 +22,7 @@ import {
   setServerMode,
 } from "../../store/slices/measurementSlice";
 import { setAutoSavePath } from "../../store/slices/fileSettingsSlice";
-import {
-  selectSerialConnectionData,
-  selectPlatformInfo,
-  selectLatestData,
-} from "../../store/selectors";
+import { selectSerialConnectionData, selectPlatformInfo } from "../../store/selectors";
 import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
 
 /**
@@ -36,7 +31,7 @@ import { CosmicWatchDataService } from "../services/CosmicWatchDataService";
 export const SerialConnection = memo(() => {
   // Redux hooks - 統合selectorを使用
   const dispatch = useAppDispatch();
-  const { connectionStatus, statistics, isRecording } = useAppSelector(
+  const { isRecording } = useAppSelector(
     selectSerialConnectionData
   );
   const { isDemoMode } = useAppSelector(selectPlatformInfo);
@@ -45,7 +40,6 @@ export const SerialConnection = memo(() => {
   const latestParsedData = useAppSelector((state) => state.measurement.latestParsedData);
 
   // プラットフォームサービス状態
-  const [platformService, setPlatformService] = useState<ServerPlatformService | null>(null);
   const [isServerPlatform, setIsServerPlatform] = useState<boolean>(false);
 
   // PlatformService初期化
@@ -54,7 +48,6 @@ export const SerialConnection = memo(() => {
       try {
         const service = await createPlatformService();
         if (service instanceof ServerPlatformService) {
-          setPlatformService(service);
           setIsServerPlatform(true);
           
           // Redux storeでサーバーモードを設定
@@ -87,8 +80,7 @@ export const SerialConnection = memo(() => {
   // オンラインアップロード機能
   const { 
     isOnlineEnabled, 
-    isOnlineConnected,
-    uploadDataInstantly 
+    isOnlineConnected
   } = useOnlineAutoUpload({
     isRecording,
     latestParsedData,

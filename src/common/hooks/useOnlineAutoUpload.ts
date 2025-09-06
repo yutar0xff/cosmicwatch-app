@@ -35,7 +35,7 @@ export const useOnlineAutoUpload = ({
   const batchSettings = useAppSelector(selectOnlineBatchSettings);
 
   const serviceRef = useRef<OnlineDataService | null>(null);
-  const uploadIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const uploadIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastUploadTimeRef = useRef<number>(0);
 
   const initializeService = useCallback(async () => {

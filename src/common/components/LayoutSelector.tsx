@@ -1,10 +1,8 @@
 import { useState, useRef, useEffect } from "react";
-import {
-  DevicePhoneMobileIcon,
-  ComputerDesktopIcon,
-  CogIcon,
-  ChevronDownIcon,
-} from "@heroicons/react/24/outline";
+import DevicePhoneMobileIcon from "@heroicons/react/24/outline/DevicePhoneMobileIcon";
+import ComputerDesktopIcon from "@heroicons/react/24/outline/ComputerDesktopIcon";
+import CogIcon from "@heroicons/react/24/outline/CogIcon";
+import ChevronDownIcon from "@heroicons/react/24/outline/ChevronDownIcon";
 import { LayoutType } from "../hooks/useResponsiveLayout";
 
 interface LayoutSelectorProps {
