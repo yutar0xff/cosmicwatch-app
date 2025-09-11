@@ -303,9 +303,9 @@ export const FileControls = memo(
           if (sessionHash) {
             await platformService.saveFile("", ""); // セッションファイルダウンロード
             return;
-          } else {
-            throw new Error("測定セッションが開始されていません");
           }
+          // セッションハッシュがない場合でも、rawDataがあれば従来の方式でダウンロード
+          // フォールスルーして従来の処理を実行
         }
 
         // 従来版（デスクトップ・Web）の処理
