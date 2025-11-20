@@ -21,7 +21,11 @@
       "Bash(cp:*)",
       "Bash(VITE_FILE_MODE=server npx vite build --mode production --outdir dist)",
       "Bash(ls:*)",
-      "Bash(VITE_FILE_MODE=server npx vite build --mode production --emptyOutDir)"
+      "Bash(VITE_FILE_MODE=server npx vite build --mode production --emptyOutDir)",
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)",
+      "WebFetch(domain:accel-kitchen.com)"
     ],
     "deny": []
   }
